@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 type Theme = {
   id: string;
@@ -10,6 +10,16 @@ type Theme = {
   top: string;
   bottom: string;
 };
+
+type Post = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  createdAt: number;
+  tags: string[];
+};
+
+const RECENT_POST_LIMIT = 12;
 
 const themes: Theme[] = [
   { id: 'launch', name: 'The launch', emoji: '🚀', colors: ['#4428d7', '#ff8062'], top: 'WHEN THE DEPLOY', bottom: 'WORKS FIRST TRY' },
@@ -40,13 +50,19 @@ function canvasBlob(canvas: HTMLCanvasElement) {
   });
 }
 
-export function MemeStudio() {
+export function MemeStudio({ initialPosts }: { initialPosts: Post[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [theme, setTheme] = useState(themes[0]);
   const [top, setTop] = useState(themes[0].top);
+  const [middle, setMiddle] = useState('');
   const [bottom, setBottom] = useState(themes[0].bottom);
+  const [showMiddle, setShowMiddle] = useState(false);
+  const [tags, setTags] = useState('deploy, engineering');
+  const [posts, setPosts] = useState(initialPosts);
+  const [query, setQuery] = useState('');
+  const [searching, setSearching] = useState(false);
   const [status, setStatus] = useState('Ready to make your point');
   const [saving, setSaving] = useState(false);
 
@@ -97,6 +113,13 @@ export function MemeStudio() {
     ctx.strokeText(topText, 540, 105, 970);
     ctx.fillText(topText, 540, 105, 970);
 
+    const middleText = middle.trim().toUpperCase();
+    if (middleText) {
+      fitText(ctx, middleText, 900, 70);
+      ctx.strokeText(middleText, 540, 540, 900);
+      ctx.fillText(middleText, 540, 540, 900);
+    }
+
     const bottomText = bottom.trim().toUpperCase() || 'GOES HERE';
     fitText(ctx, bottomText, 970, 82);
     ctx.strokeText(bottomText, 540, 940, 970);
@@ -107,7 +130,7 @@ export function MemeStudio() {
     ctx.fillStyle = '#fff';
     ctx.font = '700 22px Arial, Helvetica, sans-serif';
     ctx.fillText('memegen', 939, 1023);
-  }, [bottom, theme, top]);
+  }, [bottom, middle, theme, top]);
 
   useEffect(() => draw(), [draw]);
 
@@ -115,7 +138,10 @@ export function MemeStudio() {
     imageRef.current = null;
     setTheme(next);
     setTop(next.top);
+    setMiddle('');
+    setShowMiddle(false);
     setBottom(next.bottom);
+    setTags(`${next.id}, ${next.name.toLocaleLowerCase()}`);
     setStatus(`${next.name} selected`);
   };
 
@@ -188,16 +214,33 @@ export function MemeStudio() {
       const blob = await canvasBlob(canvas);
       const form = new FormData();
       form.set('image', blob, 'meme.png');
-      form.set('title', [top, bottom].filter(Boolean).join(' — ').slice(0, 160));
+      form.set('title', [top, middle, bottom].filter(Boolean).join(' — ').slice(0, 160));
+      form.set('tags', tags);
       const response = await fetch('/api/memes', { method: 'POST', body: form });
       if (!response.ok) throw new Error('Publish failed');
-      const result = await response.json() as { url: string };
+      const result = await response.json() as { url: string; meme: Post };
       await navigator.clipboard.writeText(new URL(result.url, window.location.origin).toString());
+      setPosts((current) => [result.meme, ...current.filter((post) => post.id !== result.meme.id)].slice(0, RECENT_POST_LIMIT));
       setStatus('Share link copied');
     } catch {
       setStatus('Could not publish yet — your image is still safe here');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const searchPosts = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSearching(true);
+    try {
+      const response = await fetch(`/api/memes?q=${encodeURIComponent(query)}&limit=${RECENT_POST_LIMIT}`);
+      if (!response.ok) throw new Error('Search failed');
+      const result = await response.json() as { memes: Post[] };
+      setPosts(result.memes);
+    } catch {
+      setStatus('Search is temporarily unavailable');
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -243,7 +286,11 @@ export function MemeStudio() {
             <canvas ref={canvasRef} width="1080" height="1080" aria-label="Live meme preview" className="aspect-square w-full rounded-[18px] bg-black object-cover" />
             <div className="space-y-2 pt-3">
               <label className="block"><span className="sr-only">Top text</span><input value={top} onChange={(event) => setTop(event.target.value)} maxLength={90} placeholder="Top text" className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-base font-bold uppercase outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
+              {showMiddle ? (
+                <div className="flex gap-2"><label className="block min-w-0 flex-1"><span className="sr-only">Middle text</span><input autoFocus value={middle} onChange={(event) => setMiddle(event.target.value)} maxLength={90} placeholder="Middle text (optional)" className="w-full rounded-xl border border-black/10 bg-[#fff7ee] px-4 py-3 text-base font-bold uppercase outline-none ring-[#ff5c35]/25 focus:ring-4" /></label><button onClick={() => { setMiddle(''); setShowMiddle(false); }} aria-label="Remove middle text" className="rounded-xl border border-black/10 px-4 text-lg font-bold text-black/45">×</button></div>
+              ) : <button onClick={() => setShowMiddle(true)} className="w-full rounded-xl border border-dashed border-black/20 px-4 py-2 text-sm font-bold text-black/45 hover:border-[#ff5c35] hover:text-[#d94221]">＋ Add middle text</button>}
               <label className="block"><span className="sr-only">Bottom text</span><input value={bottom} onChange={(event) => setBottom(event.target.value)} maxLength={90} placeholder="Bottom text" className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-base font-bold uppercase outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
+              <label className="block"><span className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-[.1em] text-black/45">Tags · comma separated</span><input value={tags} onChange={(event) => setTags(event.target.value)} maxLength={250} placeholder="work, reaction, launch" className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-sm font-semibold outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={copyImage} className="rounded-xl bg-[#ff5c35] px-4 py-3 text-sm font-black text-white active:scale-[.98]">Copy image</button>
                 <button onClick={shareImage} className="rounded-xl bg-[#171714] px-4 py-3 text-sm font-black text-white active:scale-[.98]">Share image</button>
@@ -254,6 +301,25 @@ export function MemeStudio() {
             </div>
           </div>
         </aside>
+      </section>
+
+      <section id="recent" className="border-t border-black/10 bg-white px-5 py-14 md:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-5 sm:grid-cols-[1fr_minmax(280px,420px)] sm:items-end">
+            <div><p className="text-[11px] font-bold uppercase tracking-[.12em] text-black/45">Fresh from the community</p><h2 className="mt-1 text-4xl font-black tracking-[-.055em]">Recent posts</h2><p className="mt-2 text-sm text-black/50">The newest {RECENT_POST_LIMIT}, searchable by caption or tag.</p></div>
+            <form onSubmit={searchPosts} role="search" className="flex rounded-full border border-black/15 bg-[#f5f3ee] p-1.5 focus-within:ring-4 focus-within:ring-[#ff5c35]/15">
+              <label className="min-w-0 flex-1"><span className="sr-only">Search posts</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search captions or tags…" className="w-full bg-transparent px-4 py-2 text-sm font-semibold outline-none" /></label>
+              <button disabled={searching} className="rounded-full bg-[#171714] px-5 py-2 text-sm font-black text-white disabled:opacity-50">{searching ? 'Searching…' : 'Search'}</button>
+            </form>
+          </div>
+
+          {posts.length ? <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {posts.map((post) => <a key={post.id} href={`/m/${post.id}`} className="group overflow-hidden rounded-2xl border border-black/10 bg-[#f5f3ee] transition hover:-translate-y-1 hover:shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}<img src={post.imageUrl} alt={post.title} loading="lazy" className="aspect-square w-full bg-black/5 object-cover" />
+              <div className="p-3"><h3 className="line-clamp-2 text-sm font-black leading-5">{post.title}</h3>{post.tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{post.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded-full bg-black/5 px-2 py-1 text-[10px] font-bold text-black/45">#{tag}</span>)}</div>}</div>
+            </a>)}
+          </div> : <div className="mt-7 rounded-2xl border border-dashed border-black/15 bg-[#f5f3ee] px-6 py-14 text-center"><p className="text-lg font-black">{query ? 'No posts match that search yet.' : 'The feed is ready for its first meme.'}</p><p className="mt-1 text-sm text-black/45">Publish from the editor and it will appear here.</p></div>}
+        </div>
       </section>
 
       <section id="self-host" className="border-t border-black/10 bg-[#171714] px-5 py-14 text-white md:px-10">

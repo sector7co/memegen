@@ -18,7 +18,7 @@ export default function SelfHostPage() {
         </div>
         <section className="mt-12 rounded-[28px] bg-[#171714] p-7 text-white sm:p-10">
           <h2 className="text-3xl font-black tracking-[-.04em]">Recommended production shape</h2>
-          <div className="mt-6 grid gap-6 text-sm leading-6 text-white/65 sm:grid-cols-3"><p><strong className="block text-white">React at the edge</strong>One stateless Worker serves the interface, metadata, and tiny API.</p><p><strong className="block text-white">Object storage</strong>Original and generated image bytes live in your bucket, never in SQL.</p><p><strong className="block text-white">SQLite index</strong>Only titles, object keys, and timestamps go into the relational store.</p></div>
+          <div className="mt-6 grid gap-6 text-sm leading-6 text-white/65 sm:grid-cols-3"><p><strong className="block text-white">React at the edge</strong>One stateless Worker serves the interface, metadata, and tiny API.</p><p><strong className="block text-white">Object storage</strong>Published PNG bytes live in your bucket, never in SQL; editing uploads stay on-device.</p><p><strong className="block text-white">Searchable SQLite</strong>Captions, object keys, timestamps, and normalized tags power recent posts and free-text search.</p></div>
         </section>
         <p className="mt-8 text-sm leading-6 text-black/45">For a private employee deployment, put your identity-aware proxy or Cloudflare Access in front of the app. memegen deliberately does not invent a second identity system.</p>
       </article>

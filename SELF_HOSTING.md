@@ -28,8 +28,19 @@ stay browser-local until the user explicitly publishes the final meme.
 
 ## Data model
 
-- `memes`: opaque ID, caption title, object key, content type, creation time.
+- `memes`: opaque ID, searchable caption text, object key, content type, creation time.
+- `meme_tags`: normalized, lower-case tags joined to a meme by ID.
 - `FILES`: immutable generated PNGs under `memes/<id>.png`.
+
+Image bytes never live in SQL. Uploads remain device-local while editing; only
+the final rendered PNG is written to `FILES` when a user chooses **Copy link**.
+The corresponding searchable metadata is written to `DB` in the same publish
+workflow. If the metadata write fails, the newly uploaded object is removed.
+
+Recent posts use the `idx_memes_created_at` index. Search is case-insensitive
+across caption text and associated tags, and responses are capped at 30 records
+to keep edge cost bounded. See `ARCHITECTURE.md` for the full request and data
+flows.
 
 This small boundary is deliberate: it keeps hosting cost, backup complexity,
 and vendor coupling low.

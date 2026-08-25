@@ -1,15 +1,8 @@
 import type { Metadata } from 'next';
-import { env } from 'cloudflare:workers';
 import { notFound } from 'next/navigation';
+import { getMeme } from '@/db/memes';
 
 export const runtime = 'edge';
-type Meme = { id: string; title: string; image_key: string };
-
-async function getMeme(id: string) {
-  if (!/^[a-z0-9]{12}$/.test(id)) return null;
-  return env.DB.prepare('SELECT id, title, image_key FROM memes WHERE id = ? LIMIT 1').bind(id).first<Meme>();
-}
-
 function trustedOrigin() { return process.env.SITE_ORIGIN ?? 'http://localhost:3000'; }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -44,6 +37,7 @@ export default async function MemePage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         <h1 className="mt-5 text-2xl font-black tracking-[-.04em]">{meme.title}</h1>
+        {meme.tags && <div className="mt-3 flex flex-wrap gap-2">{meme.tags.split('|').map((tag) => <span key={tag} className="rounded-full bg-black/5 px-3 py-1 text-xs font-bold text-black/55">#{tag}</span>)}</div>}
         <p className="mt-1 text-sm text-black/50">Made with memegen. No ads, no watermark.</p>
       </article>
     </main>

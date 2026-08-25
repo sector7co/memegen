@@ -1,13 +1,32 @@
 import { env } from 'cloudflare:workers';
 import { NextResponse } from 'next/server';
+import { createMemeMetadata, listMemes } from '@/db/memes';
 
 export const runtime = 'edge';
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+function normalizeTags(value: FormDataEntryValue | null) {
+  if (typeof value !== 'string') return [];
+  return [...new Set(value
+    .split(',')
+    .map((tag) => tag.normalize('NFKC').trim().toLocaleLowerCase().replace(/^#/, ''))
+    .filter((tag) => tag.length > 0 && tag.length <= 32))]
+    .slice(0, 10);
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const query = url.searchParams.get('q') ?? '';
+  const limit = Number(url.searchParams.get('limit') ?? 12);
+  const memes = await listMemes(query, limit);
+  return NextResponse.json({ memes, query });
+}
 
 export async function POST(request: Request) {
   const form = await request.formData();
   const image = form.get('image');
   const rawTitle = form.get('title');
+  const tags = normalizeTags(form.get('tags'));
   if (!(image instanceof File) || image.type !== 'image/png') return NextResponse.json({ error: 'A PNG image is required.' }, { status: 400 });
   if (image.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: 'Images must be smaller than 8 MB.' }, { status: 413 });
 
@@ -20,11 +39,14 @@ export async function POST(request: Request) {
     customMetadata: { memeId: id },
   });
   try {
-    await env.DB.prepare(`INSERT INTO memes (id, title, image_key, content_type, created_at) VALUES (?, ?, ?, ?, ?)`)
-      .bind(id, title, imageKey, 'image/png', Date.now()).run();
+    await createMemeMetadata({ id, title, imageKey, tags });
   } catch (error) {
     await env.FILES.delete(imageKey);
     throw error;
   }
-  return NextResponse.json({ id, url: `/m/${id}` }, { status: 201 });
+  return NextResponse.json({
+    id,
+    url: `/m/${id}`,
+    meme: { id, title, imageUrl: `/api/images/${imageKey}`, createdAt: Date.now(), tags },
+  }, { status: 201 });
 }
