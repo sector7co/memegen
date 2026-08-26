@@ -1,0 +1,1 @@
+ALTER TABLE `memes` ADD `context_url` text;

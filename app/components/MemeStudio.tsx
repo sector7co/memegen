@@ -15,6 +15,7 @@ type Post = {
   id: string;
   title: string;
   imageUrl: string;
+  contextUrl: string | null;
   createdAt: number;
   tags: string[];
 };
@@ -60,6 +61,7 @@ export function MemeStudio({ initialPosts }: { initialPosts: Post[] }) {
   const [bottom, setBottom] = useState(themes[0].bottom);
   const [showMiddle, setShowMiddle] = useState(false);
   const [tags, setTags] = useState('deploy, engineering');
+  const [contextUrl, setContextUrl] = useState('');
   const [posts, setPosts] = useState(initialPosts);
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -216,6 +218,7 @@ export function MemeStudio({ initialPosts }: { initialPosts: Post[] }) {
       form.set('image', blob, 'meme.png');
       form.set('title', [top, middle, bottom].filter(Boolean).join(' — ').slice(0, 160));
       form.set('tags', tags);
+      form.set('contextUrl', contextUrl);
       const response = await fetch('/api/memes', { method: 'POST', body: form });
       if (!response.ok) throw new Error('Publish failed');
       const result = await response.json() as { url: string; meme: Post };
@@ -291,6 +294,7 @@ export function MemeStudio({ initialPosts }: { initialPosts: Post[] }) {
               ) : <button onClick={() => setShowMiddle(true)} className="w-full rounded-xl border border-dashed border-black/20 px-4 py-2 text-sm font-bold text-black/45 hover:border-[#ff5c35] hover:text-[#d94221]">＋ Add middle text</button>}
               <label className="block"><span className="sr-only">Bottom text</span><input value={bottom} onChange={(event) => setBottom(event.target.value)} maxLength={90} placeholder="Bottom text" className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-base font-bold uppercase outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
               <label className="block"><span className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-[.1em] text-black/45">Tags · comma separated</span><input value={tags} onChange={(event) => setTags(event.target.value)} maxLength={250} placeholder="work, reaction, launch" className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-sm font-semibold outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
+              <label className="block"><span className="mb-1 block px-1 text-[11px] font-bold uppercase tracking-[.1em] text-black/45">Context URL · optional</span><input type="url" inputMode="url" value={contextUrl} onChange={(event) => setContextUrl(event.target.value)} maxLength={2048} placeholder="https://…" spellCheck={false} className="w-full rounded-xl border border-black/10 bg-[#f5f3ee] px-4 py-3 text-sm font-semibold outline-none ring-[#ff5c35]/25 focus:ring-4" /></label>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={copyImage} className="rounded-xl bg-[#ff5c35] px-4 py-3 text-sm font-black text-white active:scale-[.98]">Copy image</button>
                 <button onClick={shareImage} className="rounded-xl bg-[#171714] px-4 py-3 text-sm font-black text-white active:scale-[.98]">Share image</button>

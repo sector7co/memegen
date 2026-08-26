@@ -28,7 +28,8 @@ stay browser-local until the user explicitly publishes the final meme.
 
 ## Data model
 
-- `memes`: opaque ID, searchable caption text, object key, content type, creation time.
+- `memes`: opaque ID, searchable caption text, object key, content type, optional
+  HTTP(S) context URL, creation time.
 - `meme_tags`: normalized, lower-case tags joined to a meme by ID.
 - `FILES`: immutable generated PNGs under `memes/<id>.png`.
 

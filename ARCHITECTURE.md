@@ -22,7 +22,8 @@ on the user's device with Canvas.
    Canvas. Copy, native share, and download operate directly on that PNG blob;
    those actions do not contact the backend.
 3. **Copy link** is the explicit publish boundary. The client sends the final
-   PNG, caption summary, and comma-separated tags to `POST /api/memes`.
+   PNG, caption summary, comma-separated tags, and an optional context URL to
+   `POST /api/memes`.
 4. The Worker writes immutable bytes to `FILES` at `memes/<opaque-id>.png`, then
    writes the object key and metadata to `DB`. A failed metadata write deletes
    the just-created object so storage cannot silently orphan it.
@@ -32,7 +33,8 @@ on the user's device with Canvas.
 
 ## Data model and discovery
 
-- `memes`: ID, display/search title, object key, MIME type, creation timestamp.
+- `memes`: ID, display/search title, object key, MIME type, optional context URL,
+  and creation timestamp.
 - `meme_tags`: `(meme_id, tag)` composite key. Tags are normalized to lower case,
   deduplicated, limited to 10 per post, and capped at 32 characters each.
 - `idx_memes_created_at` serves the newest-first feed.
@@ -53,6 +55,8 @@ same API boundary can move caption search to SQLite FTS without changing clients
   the canonical deployment origin.
 - File type, file size, tag count/length, result count, and object-key format are
   validated at the edge.
+- Context links are limited to 2,048 characters, accept only HTTP(S), reject
+  embedded credentials, and open with cross-window isolation protections.
 
 ## Self-hosting
 

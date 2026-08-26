@@ -5,6 +5,7 @@ export const memes = sqliteTable('memes', {
   title: text('title').notNull(),
   imageKey: text('image_key').notNull().unique(),
   contentType: text('content_type').notNull().default('image/png'),
+  contextUrl: text('context_url'),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 }, (table) => [index('idx_memes_created_at').on(table.createdAt)]);
 

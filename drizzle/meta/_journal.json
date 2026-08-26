@@ -15,6 +15,13 @@
       "when": 1787633478943,
       "tag": "0001_cool_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787706128919,
+      "tag": "0002_talented_matthew_murdock",
+      "breakpoints": true
     }
   ]
 }

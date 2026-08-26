@@ -38,6 +38,7 @@ export default async function MemePage({ params }: { params: Promise<{ id: strin
         </div>
         <h1 className="mt-5 text-2xl font-black tracking-[-.04em]">{meme.title}</h1>
         {meme.tags && <div className="mt-3 flex flex-wrap gap-2">{meme.tags.split('|').map((tag) => <span key={tag} className="rounded-full bg-black/5 px-3 py-1 text-xs font-bold text-black/55">#{tag}</span>)}</div>}
+        {meme.context_url && <a href={meme.context_url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex rounded-full border border-black/15 bg-white px-4 py-2 text-sm font-black hover:border-[#ff5c35] hover:text-[#d94221]">View context ↗</a>}
         <p className="mt-1 text-sm text-black/50">Made with memegen. No ads, no watermark.</p>
       </article>
     </main>
