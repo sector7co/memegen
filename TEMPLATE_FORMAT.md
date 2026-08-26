@@ -59,7 +59,22 @@ perspective without introducing a server-side image processor.
 ## Compatibility notes
 
 Memegen.link also exposes `overlays`, `styles`, `keywords`, examples, and a
-source URL. Those are catalog/discovery metadata rather than caption geometry.
-They can be retained by an importer without affecting this core renderer. If we
-add user-selectable overlays or style variants, they should be separate optional
-manifest fields instead of being overloaded into `slots`.
+source URL. `catalog` can retain the stable catalog fields without affecting the
+core renderer:
+
+```ts
+catalog: {
+  sourceUrl: 'https://knowyourmeme.com/...',
+  keywords: ['comparison'],
+  upstream: {
+    provider: 'memegen.link',
+    id: 'drake',
+    overlays: 1,
+    styles: ['default', 'no', 'yes'],
+  },
+}
+```
+
+Examples are deliberately not part of the template identity: starter captions
+already live in `defaults`. If we add user-selectable overlays or style variants,
+the retained metadata gives us a migration path without overloading `slots`.

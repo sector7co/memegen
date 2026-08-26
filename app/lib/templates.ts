@@ -19,6 +19,17 @@ export type NormalizedPoint = { x: number; y: number };
 
 export type CaptionCount = number | { min: number; max: number };
 
+export type TemplateCatalogMetadata = {
+  sourceUrl?: string;
+  keywords?: readonly string[];
+  upstream?: {
+    provider: string;
+    id: string;
+    overlays?: number;
+    styles?: readonly string[];
+  };
+};
+
 export type MemeTemplate = {
   id: string;
   name: string;
@@ -29,6 +40,7 @@ export type MemeTemplate = {
   slots: TextSlot[];
   defaults: Record<string, string>;
   allowMiddle?: boolean;
+  catalog?: TemplateCatalogMetadata;
 };
 
 const classicSlots: TextSlot[] = [
