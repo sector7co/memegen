@@ -11,20 +11,30 @@ ads, third-party image proxy, or mandatory SaaS dependency.
 - A D1-compatible database bound as `DB`
 - An R2/S3-compatible object bucket bound as `FILES`
 - `SITE_ORIGIN` set to the canonical HTTPS origin
+- `DEPLOYMENT_MODE=internal` to enable employee uploads and publishing
 
 ## Cloudflare deployment
 
 1. Run `pnpm install`.
 2. Create a D1 database and R2 bucket in your Cloudflare account.
 3. Apply every migration in `drizzle/` to the database.
-4. Map the bindings to `DB` and `FILES` and set `SITE_ORIGIN`.
+4. Map the bindings to `DB` and `FILES`; set `SITE_ORIGIN` and
+   `DEPLOYMENT_MODE=internal`.
 5. Run `pnpm build` and deploy the generated Worker bundle.
 6. For an employee-only instance, put Cloudflare Access or your existing
    identity-aware proxy in front of the Worker.
 
-The public and internal editions are intentionally one codebase. Employees can
-use the built-in themes or upload company images directly in the editor. Uploads
-stay browser-local until the user explicitly publishes the final meme.
+The public and internal editions are intentionally one codebase. With no
+`DEPLOYMENT_MODE`, the app defaults to a curated public demo: arbitrary uploads
+are hidden and the publish endpoint returns HTTP 403. Internal mode lets
+employees use the bundled library or upload company images directly in the
+editor. Uploads stay browser-local until the user explicitly publishes the final
+meme.
+
+The default library is stored in `public/templates`; caption geometry and tags
+live in `app/lib/templates.ts`. A company can replace or extend both as part of
+its normal reviewed release process, with no external template API required at
+runtime.
 
 ## Data model
 

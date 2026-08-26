@@ -1,14 +1,16 @@
+import Link from 'next/link';
+
 const steps = [
   ['1', 'Clone and install', 'Use Node 22.13+ and pnpm. Install the exact locked dependencies with pnpm install.'],
   ['2', 'Create two bindings', 'Bind a D1-compatible SQLite database as DB and S3-compatible object storage as FILES.'],
   ['3', 'Apply migrations', 'Run the checked-in SQL migration against your database before the first deploy.'],
-  ['4', 'Deploy', 'Build the Worker-compatible bundle, set SITE_ORIGIN to the trusted public origin, then publish behind your SSO or private network.'],
+  ['4', 'Deploy', 'Build the Worker-compatible bundle, set SITE_ORIGIN and DEPLOYMENT_MODE=internal, then publish behind your SSO or private network.'],
 ];
 
 export default function SelfHostPage() {
   return (
     <main className="min-h-screen bg-[#f5f3ee] text-[#171714]">
-      <header className="border-b border-black/10 px-5 py-4 md:px-10"><div className="mx-auto flex max-w-5xl items-center justify-between"><a href="/" className="flex items-center gap-2 text-lg font-black tracking-[-0.04em]"><span className="grid size-8 place-items-center rounded-lg bg-[#ff5c35] text-white">M</span>memegen</a><a href="/" className="text-sm font-bold">Open editor →</a></div></header>
+      <header className="border-b border-black/10 px-5 py-4 md:px-10"><div className="mx-auto flex max-w-5xl items-center justify-between"><Link href="/" className="flex items-center gap-2 text-lg font-black tracking-[-0.04em]"><span className="grid size-8 place-items-center rounded-lg bg-[#ff5c35] text-white">M</span>memegen</Link><Link href="/" className="text-sm font-bold">Open editor →</Link></div></header>
       <article className="mx-auto max-w-5xl px-5 py-12 md:px-10 md:py-20">
         <p className="text-xs font-bold uppercase tracking-[.14em] text-[#d94221]">Free for companies, too</p>
         <h1 className="mt-3 max-w-4xl text-5xl font-black leading-[.92] tracking-[-.065em] sm:text-7xl">Run memegen on infrastructure you control.</h1>

@@ -10,5 +10,5 @@ export default async function Home() {
   } catch {
     // A fresh local database may not have migrations yet. The deployed database does.
   }
-  return <MemeStudio initialPosts={recent} />;
+  return <MemeStudio initialPosts={recent} internalMode={process.env.DEPLOYMENT_MODE === 'internal'} />;
 }

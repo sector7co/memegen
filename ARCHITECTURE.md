@@ -9,19 +9,23 @@ on the user's device with Canvas.
 
 | Concern | Implementation | Why |
 | --- | --- | --- |
-| UI and rendering | React + browser Canvas | Instant feedback; uploaded originals do not leave the device while editing. |
+| UI and rendering | React + browser Canvas | Instant feedback; source images do not leave the device while editing. |
+| Curated templates | Versioned assets in `public/templates` plus `app/lib/templates.ts` | No runtime dependency on a third-party image service; caption zones are reviewable code. |
 | Image bytes | R2/object binding `FILES` | Cheap blob storage, independent of relational queries. |
 | Metadata | D1/SQLite binding `DB` | Durable ordering, tags, text search, and share-page lookup. |
 | Delivery | Cloudflare-compatible edge Worker | Stateless, globally cached, and close to zero idle cost. |
 
 ## Image lifecycle
 
-1. A built-in theme is drawn procedurally, or the user selects an image from
-   their device. A selected original stays in browser memory.
-2. Top, optional middle, and bottom captions are rendered into a 1080×1080
-   Canvas. Copy, native share, and download operate directly on that PNG blob;
-   those actions do not contact the backend.
-3. **Copy link** is the explicit publish boundary. The client sends the final
+1. The browser loads one of 14 versioned, administrator-curated templates. Each
+   template defines normalized caption zones, searchable tags, and starter text.
+   Multi-panel formats can expose two, three, or four independently positioned
+   fields. Internal mode also permits a user-selected image that stays in memory.
+2. Captions are rendered into a 1080px-wide Canvas that preserves the source
+   aspect ratio. Classic formats support top, optional middle, and bottom text.
+   Copy, native share, and download operate directly on the PNG blob; those
+   actions do not contact the backend.
+3. In internal mode, **Copy link** is the explicit publish boundary. The client sends the final
    PNG, caption summary, comma-separated tags, and an optional context URL to
    `POST /api/memes`.
 4. The Worker writes immutable bytes to `FILES` at `memes/<opaque-id>.png`, then
@@ -48,7 +52,12 @@ same API boundary can move caption search to SQLite FTS without changing clients
 
 ## Trust and privacy boundaries
 
-- Uploads are private and browser-local until the user explicitly publishes.
+- `DEPLOYMENT_MODE` is fail-closed. When absent (the public demo), the upload and
+  publish controls are not rendered and `POST /api/memes` returns HTTP 403.
+- Public templates are committed, reviewed assets; the app never fetches a
+  template from Memegen.link or another third party at runtime.
+- In internal mode, uploads are private and browser-local until the user
+  explicitly publishes.
 - Published images are public on the public instance; company deployments choose
   their own network/identity boundary, such as Cloudflare Access.
 - Request host headers are not trusted for social URLs. `SITE_ORIGIN` provides
@@ -60,7 +69,9 @@ same API boundary can move caption search to SQLite FTS without changing clients
 
 ## Self-hosting
 
-Public and internal editions use the same code. A company owns its database and
-bucket, may place the Worker behind existing SSO, and can seed or upload its own
-images without a commercial feature gate. See `SELF_HOSTING.md` for deployment
-steps.
+Public and internal editions use the same code. A company sets
+`DEPLOYMENT_MODE=internal`, owns its database and bucket, may place the service
+behind existing SSO, and can seed or upload its own images without a commercial
+feature gate. Public production administration remains a separate authenticated
+control-plane concern; until one is introduced, public publishing stays disabled.
+See `SELF_HOSTING.md` for deployment steps.

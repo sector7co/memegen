@@ -35,6 +35,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.DEPLOYMENT_MODE !== 'internal') {
+    return NextResponse.json({ error: 'Publishing is disabled on this curated public demo.' }, { status: 403 });
+  }
   const form = await request.formData();
   const image = form.get('image');
   const rawTitle = form.get('title');
