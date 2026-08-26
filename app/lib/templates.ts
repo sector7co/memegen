@@ -6,13 +6,26 @@ export type TextSlot = {
   width: number;
   fontSize?: number;
   placeholder?: string;
+  transform?: {
+    rotateDeg?: number;
+    skewXDeg?: number;
+    skewYDeg?: number;
+    /** Normalized top-left, top-right, bottom-right, bottom-left corners. */
+    quad?: readonly [NormalizedPoint, NormalizedPoint, NormalizedPoint, NormalizedPoint];
+  };
 };
+
+export type NormalizedPoint = { x: number; y: number };
+
+export type CaptionCount = number | { min: number; max: number };
 
 export type MemeTemplate = {
   id: string;
   name: string;
   image: string;
   tags: string[];
+  /** A number mirrors Memegen.link's fixed `lines`; a range supports optional fields. */
+  lines: CaptionCount;
   slots: TextSlot[];
   defaults: Record<string, string>;
   allowMiddle?: boolean;
@@ -24,7 +37,7 @@ const classicSlots: TextSlot[] = [
 ];
 
 const classic = (id: string, name: string, image: string, tags: string[], top: string, bottom: string): MemeTemplate => ({
-  id, name, image, tags, slots: classicSlots, defaults: { top, bottom }, allowMiddle: true,
+  id, name, image, tags, lines: { min: 2, max: 3 }, slots: classicSlots, defaults: { top, bottom }, allowMiddle: true,
 });
 
 export const memeTemplates: MemeTemplate[] = [
@@ -35,7 +48,7 @@ export const memeTemplates: MemeTemplate[] = [
   classic('roll-safe', 'Roll Safe', '/templates/roll-safe.jpg', ['roll-safe', 'thinking', 'logic'], "CAN'T MISS THE DEADLINE", "IF YOU DON'T SET ONE"),
   classic('success-kid', 'Success Kid', '/templates/success-kid.jpg', ['success', 'win', 'kid'], 'DEPLOYED ON FRIDAY', 'NOTHING BROKE'),
   {
-    id: 'drakeposting', name: 'Drakeposting', image: '/templates/drakeposting.jpg', tags: ['drake', 'choice', 'comparison'],
+    id: 'drakeposting', name: 'Drakeposting', image: '/templates/drakeposting.jpg', tags: ['drake', 'choice', 'comparison'], lines: 2,
     slots: [
       { id: 'reject', label: 'Rejected option', x: 0.73, y: 0.25, width: 0.43, fontSize: 0.07 },
       { id: 'approve', label: 'Preferred option', x: 0.73, y: 0.75, width: 0.43, fontSize: 0.07 },
@@ -43,7 +56,7 @@ export const memeTemplates: MemeTemplate[] = [
     defaults: { reject: 'MANUAL DEPLOYS', approve: 'ONE BUTTON SHIP' },
   },
   {
-    id: 'anakin-padme', name: 'Anakin Padmé', image: '/templates/anakin-padme.png', tags: ['anakin', 'padme', 'four-panel'],
+    id: 'anakin-padme', name: 'Anakin Padmé', image: '/templates/anakin-padme.png', tags: ['anakin', 'padme', 'four-panel'], lines: 4,
     slots: [
       { id: 'panel-1', label: 'Panel 1', x: 0.25, y: 0.43, width: 0.44, fontSize: 0.055 },
       { id: 'panel-2', label: 'Panel 2', x: 0.75, y: 0.43, width: 0.44, fontSize: 0.055 },
@@ -53,7 +66,7 @@ export const memeTemplates: MemeTemplate[] = [
     defaults: { 'panel-1': 'WE ADDED TESTS', 'panel-2': 'SO IT IS SAFE?', 'panel-3': '', 'panel-4': 'IT IS SAFE, RIGHT?' },
   },
   {
-    id: 'bike-fall', name: 'Bike Fall', image: '/templates/bike-fall.jpg', tags: ['bike', 'fall', 'self-sabotage'],
+    id: 'bike-fall', name: 'Bike Fall', image: '/templates/bike-fall.jpg', tags: ['bike', 'fall', 'self-sabotage'], lines: 3,
     slots: [
       { id: 'panel-1', label: 'Panel 1', x: 0.5, y: 0.08, width: 0.82, fontSize: 0.06 },
       { id: 'panel-2', label: 'Panel 2', x: 0.5, y: 0.42, width: 0.82, fontSize: 0.06 },
@@ -63,7 +76,7 @@ export const memeTemplates: MemeTemplate[] = [
   },
   classic('disaster-girl', 'Disaster Girl', '/templates/disaster-girl.jpg', ['disaster', 'fire', 'reaction'], 'ME AFTER THE DEPLOY', 'EVERYTHING IS FINE'),
   {
-    id: 'distracted-boyfriend', name: 'Distracted Boyfriend', image: '/templates/distracted-boyfriend.jpg', tags: ['distracted', 'choice', 'labels'],
+    id: 'distracted-boyfriend', name: 'Distracted Boyfriend', image: '/templates/distracted-boyfriend.jpg', tags: ['distracted', 'choice', 'labels'], lines: 3,
     slots: [
       { id: 'new-thing', label: 'New thing', x: 0.2, y: 0.77, width: 0.3, fontSize: 0.055 },
       { id: 'me', label: 'Person', x: 0.55, y: 0.55, width: 0.25, fontSize: 0.055 },
@@ -73,7 +86,21 @@ export const memeTemplates: MemeTemplate[] = [
   },
   classic('jackie-chan-confused', 'Jackie Chan Confused', '/templates/jackie-chan-confused.jpg', ['jackie-chan', 'confused', 'reaction'], 'THE TICKET SAYS', 'WORKS AS DESIGNED'),
   classic('one-does-not-simply', 'One Does Not Simply', '/templates/one-does-not-simply.jpg', ['boromir', 'one-does-not-simply', 'challenge'], 'ONE DOES NOT SIMPLY', 'DEPLOY WITHOUT TESTS'),
-  classic('x-everywhere', 'X Everywhere', '/templates/x-everywhere.jpg', ['toy-story', 'everywhere', 'buzz'], 'EDGE CASES', 'EDGE CASES EVERYWHERE'),
+  {
+    ...classic('x-everywhere', 'X Everywhere', '/templates/x-everywhere.jpg', ['toy-story', 'everywhere', 'buzz'], 'EDGE CASES', 'EDGE CASES EVERYWHERE'),
+    slots: [
+      classicSlots[0],
+      {
+        ...classicSlots[1],
+        transform: { quad: [
+          { x: 0.1, y: 0.82 },
+          { x: 0.9, y: 0.8 },
+          { x: 0.88, y: 0.94 },
+          { x: 0.12, y: 0.96 },
+        ] },
+      },
+    ],
+  },
 ];
 
 export const optionalMiddleSlot: TextSlot = {

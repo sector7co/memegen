@@ -25,6 +25,13 @@ on the user's device with Canvas.
    aspect ratio. Classic formats support top, optional middle, and bottom text.
    Copy, native share, and download operate directly on the PNG blob; those
    actions do not contact the backend.
+
+The manifest records either a fixed caption count (compatible with
+Memegen.link's `lines`) or a minimum/maximum range for optional fields. Caption
+zones use normalized coordinates and may specify rotation, X/Y skew, or a
+four-corner quadrilateral. Quadrilateral text is rendered offscreen and mapped
+into two clipped affine triangles, providing local perspective placement for
+signs and screens. See `TEMPLATE_FORMAT.md` for the schema and examples.
 3. In internal mode, **Copy link** is the explicit publish boundary. The client sends the final
    PNG, caption summary, comma-separated tags, and an optional context URL to
    `POST /api/memes`.

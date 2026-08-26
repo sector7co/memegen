@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { memeTemplates, optionalMiddleSlot, type MemeTemplate, type TextSlot } from '../lib/templates';
+import { memeTemplates, optionalMiddleSlot, type MemeTemplate, type NormalizedPoint, type TextSlot } from '../lib/templates';
 
 type Post = { id: string; title: string; imageUrl: string; contextUrl: string | null; createdAt: number; tags: string[] };
 type MemeStudioProps = { initialPosts: Post[]; internalMode: boolean };
@@ -27,6 +27,74 @@ function canvasBlob(canvas: HTMLCanvasElement) {
 
 function titleFromCaptions(captions: Record<string, string>) {
   return Object.values(captions).map((caption) => caption.trim()).filter(Boolean).join(' — ').slice(0, 160);
+}
+
+function mapPoint(point: NormalizedPoint, height: number) {
+  return { x: point.x * OUTPUT_WIDTH, y: point.y * height };
+}
+
+function drawTriangle(
+  ctx: CanvasRenderingContext2D,
+  layer: HTMLCanvasElement,
+  source: readonly [NormalizedPoint, NormalizedPoint, NormalizedPoint],
+  destination: readonly [NormalizedPoint, NormalizedPoint, NormalizedPoint],
+) {
+  const [s0, s1, s2] = source;
+  const [d0, d1, d2] = destination;
+  const determinant = (s0.x * (s1.y - s2.y)) + (s1.x * (s2.y - s0.y)) + (s2.x * (s0.y - s1.y));
+  if (Math.abs(determinant) < 0.0001) return;
+  const a = ((d0.x * (s1.y - s2.y)) + (d1.x * (s2.y - s0.y)) + (d2.x * (s0.y - s1.y))) / determinant;
+  const c = ((d0.x * (s2.x - s1.x)) + (d1.x * (s0.x - s2.x)) + (d2.x * (s1.x - s0.x))) / determinant;
+  const e = ((d0.x * ((s1.x * s2.y) - (s2.x * s1.y))) + (d1.x * ((s2.x * s0.y) - (s0.x * s2.y))) + (d2.x * ((s0.x * s1.y) - (s1.x * s0.y)))) / determinant;
+  const b = ((d0.y * (s1.y - s2.y)) + (d1.y * (s2.y - s0.y)) + (d2.y * (s0.y - s1.y))) / determinant;
+  const d = ((d0.y * (s2.x - s1.x)) + (d1.y * (s0.x - s2.x)) + (d2.y * (s1.x - s0.x))) / determinant;
+  const f = ((d0.y * ((s1.x * s2.y) - (s2.x * s1.y))) + (d1.y * ((s2.x * s0.y) - (s0.x * s2.y))) + (d2.y * ((s0.x * s1.y) - (s1.x * s0.y)))) / determinant;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(d0.x, d0.y);
+  ctx.lineTo(d1.x, d1.y);
+  ctx.lineTo(d2.x, d2.y);
+  ctx.closePath();
+  ctx.clip();
+  ctx.transform(a, b, c, d, e, f);
+  ctx.drawImage(layer, 0, 0);
+  ctx.restore();
+}
+
+function drawPerspectiveText(ctx: CanvasRenderingContext2D, text: string, slot: TextSlot, height: number) {
+  const quad = slot.transform?.quad;
+  if (!quad) return;
+  const [topLeft, topRight, bottomRight, bottomLeft] = quad.map((point) => mapPoint(point, height));
+  const layerWidth = Math.max(1, Math.round(Math.max(Math.hypot(topRight.x - topLeft.x, topRight.y - topLeft.y), Math.hypot(bottomRight.x - bottomLeft.x, bottomRight.y - bottomLeft.y))));
+  const layerHeight = Math.max(1, Math.round(Math.max(Math.hypot(bottomLeft.x - topLeft.x, bottomLeft.y - topLeft.y), Math.hypot(bottomRight.x - topRight.x, bottomRight.y - topRight.y))));
+  const layer = document.createElement('canvas');
+  layer.width = layerWidth;
+  layer.height = layerHeight;
+  const layerContext = layer.getContext('2d');
+  if (!layerContext) return;
+  layerContext.textAlign = 'center';
+  layerContext.textBaseline = 'middle';
+  layerContext.lineJoin = 'round';
+  layerContext.strokeStyle = '#080808';
+  layerContext.fillStyle = '#fff';
+  const size = fitText(layerContext, text, layerWidth * 0.92, Math.min(layerHeight * 0.58, OUTPUT_WIDTH * (slot.fontSize ?? 0.076)));
+  layerContext.lineWidth = Math.max(4, size * 0.16);
+  layerContext.strokeText(text, layerWidth / 2, layerHeight / 2, layerWidth * 0.92);
+  layerContext.fillText(text, layerWidth / 2, layerHeight / 2, layerWidth * 0.92);
+
+  const sourceTopLeft = { x: 0, y: 0 };
+  const sourceTopRight = { x: layerWidth, y: 0 };
+  const sourceBottomRight = { x: layerWidth, y: layerHeight };
+  const sourceBottomLeft = { x: 0, y: layerHeight };
+  drawTriangle(ctx, layer, [sourceTopLeft, sourceTopRight, sourceBottomRight], [topLeft, topRight, bottomRight]);
+  drawTriangle(ctx, layer, [sourceTopLeft, sourceBottomRight, sourceBottomLeft], [topLeft, bottomRight, bottomLeft]);
+}
+
+function lineCountLabel(template: MemeTemplate) {
+  return typeof template.lines === 'number'
+    ? `${template.lines} ${template.lines === 1 ? 'caption' : 'captions'}`
+    : `${template.lines.min}–${template.lines.max} captions`;
 }
 
 export function MemeStudio({ initialPosts, internalMode }: MemeStudioProps) {
@@ -89,11 +157,20 @@ export function MemeStudio({ initialPosts, internalMode }: MemeStudioProps) {
     for (const slot of activeSlots) {
       const text = captions[slot.id]?.trim().toUpperCase();
       if (!text) continue;
+      if (slot.transform?.quad) {
+        drawPerspectiveText(ctx, text, slot, canvasHeight);
+        continue;
+      }
       const maxWidth = OUTPUT_WIDTH * slot.width;
       const size = fitText(ctx, text, maxWidth, OUTPUT_WIDTH * (slot.fontSize ?? 0.076));
+      ctx.save();
+      ctx.translate(OUTPUT_WIDTH * slot.x, canvasHeight * slot.y);
+      ctx.rotate((slot.transform?.rotateDeg ?? 0) * Math.PI / 180);
+      ctx.transform(1, Math.tan((slot.transform?.skewYDeg ?? 0) * Math.PI / 180), Math.tan((slot.transform?.skewXDeg ?? 0) * Math.PI / 180), 1, 0, 0);
       ctx.lineWidth = Math.max(7, size * 0.16);
-      ctx.strokeText(text, OUTPUT_WIDTH * slot.x, canvasHeight * slot.y, maxWidth);
-      ctx.fillText(text, OUTPUT_WIDTH * slot.x, canvasHeight * slot.y, maxWidth);
+      ctx.strokeText(text, 0, 0, maxWidth);
+      ctx.fillText(text, 0, 0, maxWidth);
+      ctx.restore();
     }
   }, [activeSlots, canvasHeight, captions, imageRevision]);
 
@@ -134,7 +211,7 @@ export function MemeStudio({ initialPosts, internalMode }: MemeStudioProps) {
       setCanvasHeight(Math.round(OUTPUT_WIDTH * image.height / image.width));
       setIsCustomImage(true);
       setTemplate({
-        id: 'custom', name: file.name, image: url, tags: ['custom'], allowMiddle: true,
+        id: 'custom', name: file.name, image: url, tags: ['custom'], lines: { min: 2, max: 3 }, allowMiddle: true,
         slots: [
           { id: 'top', label: 'Top text', x: 0.5, y: 0.1, width: 0.9 },
           { id: 'bottom', label: 'Bottom text', x: 0.5, y: 0.9, width: 0.9 },
@@ -259,7 +336,7 @@ export function MemeStudio({ initialPosts, internalMode }: MemeStudioProps) {
               {memeTemplates.map((item) => <button onClick={() => chooseTemplate(item)} key={item.id} className="group text-left" aria-pressed={template.id === item.id && !isCustomImage}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={item.image} alt="" loading="lazy" className="aspect-[4/3] w-full rounded-2xl bg-black/5 object-cover shadow-sm transition group-hover:-translate-y-1 group-aria-pressed:ring-4 group-aria-pressed:ring-[#ff5c35]/30" />
-                <span className="mt-2 block text-sm font-bold">{item.name}</span>
+                <span className="mt-2 block text-sm font-bold">{item.name}</span><span className="block text-[11px] font-semibold text-black/40">{lineCountLabel(item)}</span>
               </button>)}
             </div>
           </div>
