@@ -82,3 +82,11 @@ behind existing SSO, and can seed or upload its own images without a commercial
 feature gate. Public production administration remains a separate authenticated
 control-plane concern; until one is introduced, public publishing stays disabled.
 See `SELF_HOSTING.md` for deployment steps.
+
+The homelab container runs the same compiled Worker under local Workerd. A
+single persistent `/data` volume backs Miniflare's D1 and R2 implementations;
+the container entrypoint applies checked-in migrations before serving traffic.
+This preserves the Cloudflare binding contract while keeping the image
+renderer, routes, and storage code identical across public and internal builds.
+Local bindings are single-node storage and must not be mistaken for a shared,
+horizontally scalable database or object store.

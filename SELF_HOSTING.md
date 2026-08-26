@@ -13,6 +13,44 @@ ads, third-party image proxy, or mandatory SaaS dependency.
 - `SITE_ORIGIN` set to the canonical HTTPS origin
 - `DEPLOYMENT_MODE=internal` to enable employee uploads and publishing
 
+## Docker Compose (recommended for a homelab)
+
+The repository includes a production build container with a local Workerd
+runtime, automatic D1 migrations, and persistent local D1/R2 storage.
+
+```sh
+SITE_ORIGIN=https://memegen.intranet.example docker compose up -d --build
+```
+
+Open the value of `SITE_ORIGIN` after placing the service behind your existing
+TLS reverse proxy. For a direct LAN-only test, the default is
+`http://localhost:3000`; set `MEMEGEN_PORT` to change the published host port.
+
+The named `memegen-data` volume contains both the SQLite/D1 state and generated
+image objects. Back up that volume and never replace it during an upgrade:
+
+```sh
+docker compose pull
+docker compose up -d --build
+```
+
+The entrypoint applies all unapplied migrations before starting the service.
+`DEPLOYMENT_MODE=internal` enables employee uploads, tags, context URLs, and
+publishing. Put the container behind SSO or an identity-aware reverse proxy;
+memegen does not provide its own authentication layer.
+
+This local binding mode is intentionally a **single-node** deployment. Multiple
+replicas would each have independent local state. Use real Cloudflare D1/R2 or
+replace the storage adapters with shared services before scaling horizontally.
+
+Useful checks:
+
+```sh
+docker compose ps
+docker compose logs -f memegen
+curl --fail http://localhost:3000/
+```
+
 ## Cloudflare deployment
 
 1. Run `pnpm install`.

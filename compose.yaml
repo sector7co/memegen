@@ -1,0 +1,20 @@
+services:
+  memegen:
+    build:
+      context: .
+    image: memegen:local
+    restart: unless-stopped
+    ports:
+      - "${MEMEGEN_PORT:-3000}:3000"
+    environment:
+      DEPLOYMENT_MODE: internal
+      SITE_ORIGIN: "${SITE_ORIGIN:-http://localhost:3000}"
+    volumes:
+      - memegen-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  memegen-data:
